@@ -12,6 +12,7 @@ import org.telegram.api.engine.file.Downloader;
 import org.telegram.api.engine.file.Uploader;
 import org.telegram.api.engine.storage.AbsApiState;
 import org.telegram.api.functions.channels.TLRequestChannelsReadHistory;
+import org.telegram.api.functions.messages.TLRequestMessagesForwardMessages;
 import org.telegram.api.functions.messages.TLRequestMessagesReadHistory;
 import org.telegram.api.functions.messages.TLRequestMessagesSendMedia;
 import org.telegram.api.functions.messages.TLRequestMessagesSendMessage;
@@ -40,9 +41,7 @@ import org.telegram.bot.services.BotLogger;
 import org.telegram.bot.services.NotificationsService;
 import org.telegram.bot.structure.Chat;
 import org.telegram.bot.structure.IUser;
-import org.telegram.tl.TLMethod;
-import org.telegram.tl.TLObject;
-import org.telegram.tl.TLVector;
+import org.telegram.tl.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -270,6 +269,19 @@ public class KernelComm implements IKernelComm {
         });
     }
 
+    public void forwardMessageFromChannelToChannel(@NotNull Chat chatIN, @NotNull Chat chatOUT, int messageId) throws RpcException {
+
+        final TLRequestMessagesForwardMessages request = new TLRequestMessagesForwardMessages();
+        request.setFromPeer(TLFactory.createTLInputPeer(null, chatIN));
+        request.setToPeer(TLFactory.createTLInputPeer(null, chatOUT));
+        TLIntVector integers = new TLIntVector();
+        integers.add(messageId);
+        request.setId(integers);
+        BotLogger.info(LOGTAG, "forward message to: " + chatOUT.getId());
+        performSendMessageSyncInternal(request);
+
+    }
+
     private void sendMessageInternal(@NotNull IUser user, @Nullable String message, @Nullable Integer replayToMsg,
                                      @Nullable TLVector<TLAbsMessageEntity> entities,
                                      boolean enableWebPreview, boolean parseMarkdown) throws RpcException {
@@ -427,6 +439,27 @@ public class KernelComm implements IKernelComm {
             performSendMessageSyncInternal(request);
         }
     }
+
+    private void performSendMessageSyncInternal(TLRequestMessagesForwardMessages request) throws RpcException {
+        final int id = this.random.nextInt();
+        TLLongVector randomIds = new TLLongVector();
+        for (Integer index : request.getId()) {
+            randomIds.add(this.random.nextLong());
+        }
+        request.setRandomId(randomIds);
+
+        try {
+            final TLAbsUpdates updates = doRpcCallSync(request);
+            if (updates != null) {
+                handleUpdates(updates);
+            }
+        } catch (ExecutionException e) {
+            BotLogger.error(LOGTAG, e);
+        } finally {
+            BotLogger.info(LOGTAG, "Sending message " + id + " was successful");
+        }
+    }
+
 
     private void performSendMessageSyncInternal(TLRequestMessagesSendMessage request) throws RpcException {
         final int id = this.random.nextInt();

@@ -38,6 +38,8 @@ public interface IKernelComm extends NotificationsService.NotificationObserver {
 
     void doRpcCallAsyncNoReturn(TLMethod<TLObject> method);
 
+    void forwardMessageFromChannelToChannel(@NotNull Chat chatIN, @NotNull Chat chatOUT, int messageId) throws RpcException;
+
     void sendMessage(@NotNull IUser user, @NotNull String message) throws RpcException;
 
     void sendMessageWithMarkdown(@NotNull IUser user, @NotNull String message) throws RpcException;
